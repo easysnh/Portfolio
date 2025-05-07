@@ -1,0 +1,135 @@
+Project
+
+WITH year_19 AS (  
+  SELECT master_metadata_album_album_name, master_metadata_album_artist_name, master_metadata_track_name, ts, conn_country, ms_played, platform,reason_start,reason_end, skipped, shuffle FROM wyk-syed-hussain.spotify.19a
+  UNION ALL
+  SELECT master_metadata_album_album_name, master_metadata_album_artist_name, master_metadata_track_name, ts, conn_country, ms_played, platform,reason_start,reason_end, skipped, shuffle FROM wyk-syed-hussain.spotify.19a
+  UNION ALL
+  SELECT master_metadata_album_album_name, master_metadata_album_artist_name, master_metadata_track_name, ts, conn_country, ms_played, platform,reason_start,reason_end, skipped, shuffle FROM wyk-syed-hussain.spotify.19b
+  UNION ALL
+  SELECT master_metadata_album_album_name, master_metadata_album_artist_name, master_metadata_track_name, ts, conn_country, ms_played, platform,reason_start,reason_end, skipped, shuffle FROM wyk-syed-hussain.spotify.19c
+  UNION ALL
+  SELECT master_metadata_album_album_name, master_metadata_album_artist_name, master_metadata_track_name, ts, conn_country, ms_played, platform,reason_start,reason_end, skipped, shuffle FROM wyk-syed-hussain.spotify.19_20
+  WHERE EXTRACT(YEAR FROM ts) = 2019 
+    AND ms_played < 570000
+    )
+
+
+SELECT
+  master_metadata_track_name AS song_name,
+  master_metadata_album_artist_name AS artist,
+  ms_played,
+  ts,
+FROM year_19
+WHERE LOWER(master_metadata_album_artist_name) NOT LIKE '%asmr%'
+ AND ms_played < 570000
+ORDER by ms_played
+
+
+
+
+As part of short data personal data projecting using SQL and PowerBI, I looked into the music I had listened to in 2019 from the app Spotify. 
+
+Questions:
+
+What songs were played mosts? And what are the most popular artists?
+
+What were the most skipped songs? Skipped songs listened for less than 10
+
+
+
+/* What was the most popular songs played*/
+SELECT
+  master_metadata_track_name AS song_name,
+  master_metadata_album_artist_name AS artist,
+  ms_played,
+  ts,
+FROM year_19
+ORDER by ms_played
+
+
+/*What was the most popular albums played (at least 5 songs listened) */
+WITH album_plays AS (SELECT
+  master_metadata_album_album_name AS album,
+  master_metadata_album_artist_name AS artist,
+  COUNT (DISTINCT master_metadata_track_name) AS count_times,
+  COUNT(*) as total
+FROM wyk-syed-hussain.spotify.19c
+GROUP BY album, artist
+ORDER by total DESC)
+
+
+SELECT *
+FROM album_plays
+WHERE count_times > 4
+
+
+
+
+  /* What were the most skipped songs? Skipped songs listened for less than 10 */
+SELECT
+  master_metadata_track_name AS song_name,
+  master_metadata_album_artist_name AS artist,
+  COUNT(*) as total
+FROM wyk-syed-hussain.spotify.19c
+WHERE ms_played <10000
+GROUP BY song_name, artist
+ORDER by total DESC
+
+
+
+
+
+
+/Most popular song and artist by month/
+
+
+WITH monthly_plays AS (SELECT
+  master_metadata_track_name AS song_name,
+  master_metadata_album_artist_name AS artist,
+  EXTRACT(MONTH FROM ts) as month,
+  COUNT(*) AS num_plays,
+FROM year_19
+WHERE
+  ms_played > 60000
+GROUP BY song_name, artist, month
+ORDER BY month, num_plays DESC),
+
+
+ranked_songs AS (
+select
+ monthly_plays.song_name,
+ artist,
+ month,
+ num_plays,
+ RANK() OVER(PARTITION BY month ORDER BY num_plays DESC) AS rank
+FROM monthly_plays)
+
+
+SELECT *
+FROM ranked_songs
+WHERE rank <= 10
+ORDER BY month, rank
+
+
+
+
+/* What does cumulative listening time look like overtime, per week/*
+
+
+
+WITH time_listen AS (SELECT
+  DATE_TRUNC(ts, week(monday)) as week,
+  ROUND(SUM(ms_played)/1000,0) AS time_listened
+FROM wyk-syed-hussain.spotify.year_19
+GROUP BY week
+ORDER BY week)
+
+
+
+
+  SELECT
+    week,
+    time_listened,
+    SUM(time_listened) OVER(ORDER BY week) AS total_time
+  FROM time_listen
