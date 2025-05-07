@@ -1,4 +1,4 @@
-Project
+Spotify
 
 WITH year_19 AS (  
   SELECT master_metadata_album_album_name, master_metadata_album_artist_name, master_metadata_track_name, ts, conn_country, ms_played, platform,reason_start,reason_end, skipped, shuffle FROM wyk-syed-hussain.spotify.19a
